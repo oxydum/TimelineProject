@@ -16,7 +16,7 @@
 
     <script type="text/javascript"><![CDATA[
 
-        var ST="svgtl15",HN="http://www.w3.org/1999/xhtml";
+        var ST="svgtl16",HN="http://www.w3.org/1999/xhtml";
         var COLS=["#2ea043","#3fb950","#f0883e","#d47631","#f85149","#da3633","#58a6ff","#388bfd","#bc8cff","#a371f7","#e3b341","#d29922"];
         var TYP={commit:{l:"Commit",c:"#26a641"},milestone:{l:"Jalon",c:"#f0883e"},release:{l:"Release",c:"#58a6ff"},bug:{l:"Bug",c:"#f85149"}};
         var MOIS=["Jan","Fev","Mar","Avr","Mai","Jun","Jul","Aou","Sep","Oct","Nov","Dec"];
@@ -133,6 +133,39 @@
             return r;
             }
 
+            /* ===== IMPORT / EXPORT ===== */
+            function exportData(){
+            try{
+            var json=JSON.stringify(S,null,2);
+            var blob=new Blob([json],{type:"application/json"});
+            var url=URL.createObjectURL(blob);
+            var a=document.createElementNS(HN,"a");
+            a.href=url;a.download="project-timeline-backup.json";
+            var wrap=$("A");if(wrap){wrap.appendChild(a);a.click();setTimeout(function(){wrap.removeChild(a);URL.revokeObjectURL(url)},100)}
+            ts("Donnees exportees","s");
+            }catch(e){ts("Erreur d export","e")}
+            }
+            function importData(){
+            var inp=document.createElementNS(HN,"input");
+            inp.type="file";inp.accept=".json";inp.style.display="none";
+            inp.addEventListener("change",function(e){
+            var file=e.target.files[0];if(!file)return;
+            var reader=new FileReader();
+            reader.onload=function(ev){
+            try{
+            var data=JSON.parse(ev.target.result);
+            if(data && data.projects && Array.isArray(data.projects)){
+            S=data;if(!S.pinned)S.pinned=[];
+            save();FP=null;EDIT_ID=null;rA();
+            ts("Donnees importees avec succes","s");
+            }else{ts("Format de fichier invalide","e")}
+            }catch(ex){ts("Erreur de lecture du fichier JSON","e")}
+            };
+            reader.readAsText(file);
+            });
+            var wrap=$("A");if(wrap){wrap.appendChild(inp);inp.click();setTimeout(function(){if(inp.parentNode)inp.parentNode.removeChild(inp)},2000)}
+            }
+
             /* ===== SIDEBAR ===== */
             function rSB(){
             var sb=$("SB");if(!sb)return;
@@ -145,10 +178,12 @@
                     pl+='<div class="pc" draggable="true" data-id="'+p.id+'"><div class="pc-head"><span class="handle">&#9776;</span><span style="width:10px;height:10px;border-radius:50%;background:'+p.color+';flex-shrink:0"></span><span style="font-size:13px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.name)+'</span><span class="pri-badge">P'+priority+'</span></div><div class="pc-body">'+(p.desc?'<div style="font-size:11px;color:#8b949e;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.desc)+'</div>':'')+'<div style="font-size:10px;color:#484f58"><span style="font-family:monospace">'+actCount+'</span> activite'+(actCount!==1?"s":"")+'</div></div><div class="pc-foot"><div style="display:flex;gap:4px"><button class="bg" data-ep="'+p.id+'">Edit</button><button class="bd" data-dp="'+p.id+'">Del</button></div><div style="display:flex;gap:2px">'+(j>0?'<button class="bg" data-mu="'+p.id+'">&#9650;</button>':'')+(j<S.projects.length-1?'<button class="bg" data-md="'+p.id+'">&#9660;</button>':'')+'<button class="bg" data-pp="'+p.id+'" style="'+(isPinned?"color:#f0883e;border-color:#f0883e":"")+'">&#128204;</button></div></div></div>';
                         }
                         var so='<option value="">Choisir un projet</option>';for(var k=0;k<S.projects.length;k++){var q=S.projects[k];so+='<option value="'+q.id+'">'+esc(q.name)+'</option>';}
-                            sb.innerHTML='<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">'+(editProj?"Modifier Projet":"Nouveau Projet")+'</div><form id="PF" style="display:flex;flex-direction:column;gap:7px"><input class="inp" id="PN" placeholder="Nom du projet" required="required" value="'+pnVal+'"/><input class="inp" id="PD" placeholder="Description" value="'+pdVal+'"/><div><div style="font-size:10px;color:#484f58;margin-bottom:3px">Couleur</div><div id="CP" style="display:flex;gap:4px;flex-wrap:wrap">'+cp+'</div></div><button type="submit" class="ba" id="PB">'+pbTxt+'</button>'+(editProj?'<button type="button" class="bd" id="CE" style="width:100%;margin-top:4px">Annuler</button>':'')+'</form></div><div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Projets <span style="color:#484f58;font-weight:400">(Glisser)</span></div><div id="PL">'+(pl||'<div style="font-size:12px;color:#484f58;text-align:center;padding:8px">Aucun projet</div>')+'</div></div><div><div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ajouter Activite</div><form id="AF" style="display:flex;flex-direction:column;gap:7px"><select class="inp" id="AP" required="required">'+so+'</select><select class="inp" id="AT" required="required"><option value="">Type</option><option value="commit">Commit</option><option value="milestone">Jalon</option><option value="release">Release</option><option value="bug">Correction</option></select><input type="date" class="inp" id="AD" required="required"/><input class="inp" id="AX" placeholder="Description" required="required"/><button type="submit" class="ba">Ajouter</button></form></div>';
+                            sb.innerHTML='<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">'+(editProj?"Modifier Projet":"Nouveau Projet")+'</div><form id="PF" style="display:flex;flex-direction:column;gap:7px"><input class="inp" id="PN" placeholder="Nom du projet" required="required" value="'+pnVal+'"/><input class="inp" id="PD" placeholder="Description" value="'+pdVal+'"/><div><div style="font-size:10px;color:#484f58;margin-bottom:3px">Couleur</div><div id="CP" style="display:flex;gap:4px;flex-wrap:wrap">'+cp+'</div></div><button type="submit" class="ba" id="PB">'+pbTxt+'</button>'+(editProj?'<button type="button" class="bd" id="CE" style="width:100%;margin-top:4px">Annuler</button>':'')+'</form></div><div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Projets <span style="color:#484f58;font-weight:400">(Glisser)</span></div><div id="PL">'+(pl||'<div style="font-size:12px;color:#484f58;text-align:center;padding:8px">Aucun projet</div>')+'</div></div><div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ajouter Activite</div><form id="AF" style="display:flex;flex-direction:column;gap:7px"><select class="inp" id="AP" required="required">'+so+'</select><select class="inp" id="AT" required="required"><option value="">Type</option><option value="commit">Commit</option><option value="milestone">Jalon</option><option value="release">Release</option><option value="bug">Correction</option></select><input type="date" class="inp" id="AD" required="required"/><input class="inp" id="AX" placeholder="Description" required="required"/><button type="submit" class="ba">Ajouter</button></form></div><div><div style="font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Donnees</div><div style="display:flex;gap:6px"><button class="ba" id="EXP" style="flex:1">Exporter</button><button class="ba" id="IMP" style="flex:1;background:#58a6ff">Importer</button></div></div>';
                             $("AD").value=td();
                             var cpEl=$("CP");if(cpEl){var spans=cpEl.querySelectorAll(".co");for(var x=0;x<spans.length;x++){(function(el){el.addEventListener("click",function(){SC=el.getAttribute("data-c");var all=cpEl.querySelectorAll(".co");for(var y=0;y<all.length;y++){all[y].classList.remove("sel")}el.classList.add("sel")})})(spans[x])}}
                                     var pf=$("PF");if(pf){pf.addEventListener("submit",hPF)}var af=$("AF");if(af){af.addEventListener("submit",hAF)}var ce=$("CE");if(ce){ce.addEventListener("click",function(){EDIT_ID=null;SC="#2ea043";rSB()})}
+                                    var expBtn=$("EXP");if(expBtn){expBtn.addEventListener("click",exportData)}
+                                    var impBtn=$("IMP");if(impBtn){impBtn.addEventListener("click",importData)}
                                     var eps=sb.querySelectorAll("[data-ep]");for(var i1=0;i1<eps.length;i1++){(function(b){b.addEventListener("click",function(ev){ev.stopPropagation();EDIT_ID=b.getAttribute("data-ep");rSB()})})(eps[i1])}
                                         var dps=sb.querySelectorAll("[data-dp]");for(var i2=0;i2<dps.length;i2++){(function(b){b.addEventListener("click",function(ev){ev.stopPropagation();cDP(b.getAttribute("data-dp"))})})(dps[i2])}
                                             var mus=sb.querySelectorAll("[data-mu]");for(var i3=0;i3<mus.length;i3++){(function(b){b.addEventListener("click",function(ev){ev.stopPropagation();moveP(b.getAttribute("data-mu"),-1)})})(mus[i3])}
